@@ -160,6 +160,7 @@ for USE_LINE in $(grep -n "^$PATTERN" $INPUT_FILE); do
     let "I++"
 done
 
+# list all databases
 if [ "$LIST_DATABASES" = true ] ; then
     for i in "${DBS_NAME[@]}"
     do
@@ -169,6 +170,7 @@ if [ "$LIST_DATABASES" = true ] ; then
     exit
 fi
 
+# extract all databases
 if [ "$ALL_DATABASES" = true ] ; then
     if [[ -z "$OUTPUT" ]]; then #if empty
         OUTPUT_DIR=''
@@ -187,7 +189,7 @@ if [ "$ALL_DATABASES" = true ] ; then
     exit;
 fi
 
-
+# extract specific database
 I=$(array_search $DB_SELECTED "${DBS_NAME[@]}")
 
 if [ $I -eq 0 ]
