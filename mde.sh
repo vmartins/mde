@@ -2,8 +2,10 @@
 
 # MDE - mysqldump Database Extract
 # Extract specific database from mysqldump file
-# Author: Vitor Martins <vmartins@gmail.com>
-# Usage: dbextract.sh [OPTIONS]
+# Author: Vitor Martins - https://github.com/vmartins/mde
+# Usage: mde.sh [OPTIONS]
+
+ARGS_COUNT="$#"
 
 # Gets the parameters
 while [ "$1" != "" ]; do
@@ -46,9 +48,9 @@ while [ "$1" != "" ]; do
     shift
 done
 
-if [[ "$#" -ne 1 || "$P_HELP" = true ]]; then
+if [[ "$ARGS_COUNT" -lt 1 || "$P_HELP" = true ]]; then
     head -7 $0 | tail -4 | awk -F'# ' '{print $2}'
-    echo '  -?, --help         Display this help and exit.'
+    echo '  -?, --help         Display this help and exit'
     echo '  --version          Output version information and exit'
     echo '  -i <file>          Local MySql dump file'
     echo '  -l, --list         List the databases found in dump file'
@@ -76,9 +78,11 @@ if [ "$P_DATABASE" = true ] ; then
     fi
 fi
 
+
 if [[ -z "$P_DATABASE" && -z "$ALL_DATABASES" ]]; then
-    ALL_DATABASES=true;
+    ALL_DATABASES=true
 fi
+
 
 if [ "$ALL_DATABASES" = true ] ; then
     if [ "$P_OUTPUT" = true ] ; then
@@ -126,7 +130,7 @@ array_search()    {
 extract() {
     local DB_SELECTED=$1
 
-    INDEX_SELECTED=$(($(IndexOf $DB_SELECTED "${DBS_NAME[@]}")-1))
+    INDEX_SELECTED=$(($(array_search $DB_SELECTED "${DBS_NAME[@]}")-1))
 
     LINE_SELECTED=${DBS_LINE[$INDEX_SELECTED]}
     LINE_NEXT=${DBS_LINE[$INDEX_SELECTED+1]}
@@ -140,19 +144,19 @@ extract() {
     head -$(($LINE_NEXT-1)) $INPUT_FILE | tail -$(($LINE_NEXT-$LINE_SELECTED))
 }
 
-IFS=$'\n';
-DBS_NAME=();
-
+IFS=$'\n'
+PATTERN='CREATE DATABASE .* `\(.*\)` .*;'
+DBS_NAME=()
+DBS_LINE=()
 I=0;
-#for USE_LINE in $(grep -n "USE \`.*\`;" $INPUT_FILE); do
-for USE_LINE in $(grep -n "^CREATE DATABASE .* \`.*\`.*;" $INPUT_FILE); do
-    DB_LINE=$(echo $USE_LINE | awk -F ':' '{ print $1 }')
-    #DB_NAME=$(echo $USE_LINE | awk -F ':' '{ print $2 }' | sed 's/USE `\(.*\)`;/\1/')
-    DB_NAME=$(echo $USE_LINE | awk -F ':' '{ print $2 }' | sed 's/CREATE DATABASE .* `\(.*\)` .*;/\1/')
 
-    DBS_LINE[$I]=$DB_LINE;
-    DBS_NAME[$I]=$DB_NAME;
-    #echo "$DB_LINE - $DB_NAME"
+for USE_LINE in $(grep -n "^$PATTERN" $INPUT_FILE); do
+    DB_LINE=$(echo $USE_LINE | awk -F ':' '{ print $1 }')
+    DB_NAME=$(echo $USE_LINE | awk -F ':' '{ print $2 }' | sed "s/$PATTERN/\1/")
+
+    DBS_LINE[$I]=$DB_LINE
+    DBS_NAME[$I]=$DB_NAME
+
     let "I++"
 done
 
@@ -167,20 +171,20 @@ fi
 
 if [ "$ALL_DATABASES" = true ] ; then
     if [[ -z "$OUTPUT" ]]; then #if empty
-        OUTPUT_DIR='';
+        OUTPUT_DIR=''
     else
-        OUTPUT_DIR="${OUTPUT%/}/";
+        OUTPUT_DIR="${OUTPUT%/}/"
     fi
 
     for i in "${DBS_NAME[@]}"
     do
         :
         OUTPUT_FILENAME="$OUTPUT_DIR$i-$(basename $INPUT_FILE)"
-        echo -n $i
+        echo -n $i;
         extract $i > $OUTPUT_FILENAME
         echo " > $OUTPUT_FILENAME"
     done
-    exit
+    exit;
 fi
 
 
@@ -188,8 +192,8 @@ I=$(array_search $DB_SELECTED "${DBS_NAME[@]}")
 
 if [ $I -eq 0 ]
 then
-    echo "$(basename $0): Database '$DB_SELECTED' not found in $INPUT_FILE";
-    exit;
+    echo "$(basename $0): Database '$DB_SELECTED' not found in $INPUT_FILE"
+    exit
 fi
 
 if [ "$P_OUTPUT" = true ] ; then
